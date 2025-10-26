@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production Tracking - Stellantis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --stellantis-blue: #005596;
+            --stellantis-red: #E30613;
+            --stellantis-dark: #1D1D1B;
+            --stellantis-light: #F8F9FA;
+            --stellantis-gray: #6C757D;
+            --stellantis-border: #E0E0E0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: #f8f9fa;
+            color: var(--stellantis-dark);
+            line-height: 1.6;
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-right: 1px solid var(--stellantis-border);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.08);
+            z-index: 1000;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--stellantis-border);
+            background: linear-gradient(135deg, var(--stellantis-blue) 0%, #003B6F 100%);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            height: 32px;
+            filter: brightness(0) invert(1);
+        }
+
+        .brand-name {
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-section {
+            padding: 8px 0;
+        }
+
+        .nav-section-title {
+            padding: 12px 24px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--stellantis-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            color: var(--stellantis-dark);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover {
+            background-color: #f8f9fa;
+            color: var(--stellantis-blue);
+        }
+
+        .nav-item.active {
+            background-color: rgba(0, 85, 150, 0.08);
+            color: var(--stellantis-blue);
+            border-left-color: var(--stellantis-blue);
+            font-weight: 600;
+        }
+
+        .nav-icon {
+            width: 20px;
+            margin-right: 12px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-bar {
+            background: white;
+            border-bottom: 1px solid var(--stellantis-border);
+            padding: 0 32px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--stellantis-dark);
+            margin: 0;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: var(--stellantis-blue);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 32px;
+            background: #f8f9fa;
+            overflow-y: auto;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid var(--stellantis-border);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            transition: all 0.2s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--stellantis-border);
+            background: white;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--stellantis-dark);
+            margin: 0;
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid var(--stellantis-border);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 20px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--stellantis-dark);
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--stellantis-gray);
+            font-weight: 500;
+        }
+
+        .table-container {
+            background: white;
+            border: 1px solid var(--stellantis-border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .table {
+            margin: 0;
+        }
+
+        .table thead th {
+            background: #f8f9fa;
+            border-bottom: 1px solid var(--stellantis-border);
+            padding: 16px;
+            font-weight: 600;
+            color: var(--stellantis-dark);
+            font-size: 14px;
+        }
+
+        .table tbody td {
+            padding: 16px;
+            border-bottom: 1px solid var(--stellantis-border);
+            vertical-align: middle;
+        }
+
+        .table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-module {
+            background: rgba(0, 85, 150, 0.1);
+            color: var(--stellantis-blue);
+        }
+
+        .badge-shift {
+            background: rgba(227, 6, 19, 0.1);
+            color: var(--stellantis-red);
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: var(--stellantis-dark);
+            margin-bottom: 8px;
+        }
+
+        .form-control {
+            border: 1px solid var(--stellantis-border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--stellantis-blue);
+            box-shadow: 0 0 0 3px rgba(0, 85, 150, 0.1);
+        }
+
+        .form-section {
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--stellantis-dark);
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--stellantis-border);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--stellantis-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #004580;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 85, 150, 0.3);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--stellantis-border);
+            color: var(--stellantis-dark);
+        }
+
+        .btn-outline:hover {
+            background: #f8f9fa;
+            border-color: var(--stellantis-blue);
+            color: var(--stellantis-blue);
+        }
+
+        .login-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--stellantis-blue) 0%, #003B6F 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 16px;
+            padding: 48px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .login-logo {
+            height: 48px;
+            margin-bottom: 16px;
+        }
+
+        .login-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--stellantis-dark);
+            margin-bottom: 8px;
+        }
+
+        .login-subtitle {
+            color: var(--stellantis-gray);
+            font-size: 14px;
+        }
+
+        .text-blue { color: var(--stellantis-blue); }
+        .text-red { color: var(--stellantis-red); }
+        .bg-blue { background: var(--stellantis-blue); }
+        .bg-red { background: var(--stellantis-red); }
+
+        .hidden { display: none; }
+        .fade-in { animation: fadeIn 0.3s ease; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .sync-status {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .sync-online {
+            background: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+        }
+
+        .sync-offline {
+            background: rgba(108, 117, 125, 0.1);
+            color: #6c757d;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid var(--stellantis-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 80px;
+            }
+            .nav-item span {
+                display: none;
+            }
+            .content-area {
+                padding: 20px;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Page -->
+    <div id="loginPage" class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <svg class="login-logo" viewBox="0 0 120 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fill="#005596" d="M20,8 L32,8 L32,28 L20,28 L20,8 Z M40,8 L52,8 L52,20 L40,20 L40,8 Z M40,24 L52,24 L52,28 L40,28 L40,24 Z M60,8 L72,8 L72,28 L60,28 L60,8 Z M80,8 L92,8 L92,20 L80,20 L80,8 Z M80,24 L92,24 L92,28 L80,28 L80,24 Z M100,8 L112,8 L112,28 L100,28 L100,8 Z"/>
+                </svg>
+                <h1 class="login-title">Production Tracking</h1>
+                <p class="login-subtitle">Stellantis Engine Manufacturing</p>
+                <div id="firebaseStatus" class="sync-status sync-offline mt-3">
+                    <i class="fas fa-database me-2"></i>Connecting to Database...
+                </div>
+            </div>
+            <form id="loginForm">
+                <div class="mb-4">
+                    <label class="form-label">PSA Code</label>
+                    <input type="text" class="form-control" id="codePSA" required placeholder="Enter your PSA code">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-control" id="userName" required placeholder="Enter your full name">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label">Shift</label>
+                    <select class="form-control" id="shift" required>
+                        <option value="" selected disabled>Select shift</option>
+                        <option value="Morning">Morning (06:00 - 14:00)</option>
+                        <option value="Evening">Evening (14:00 - 22:00)</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label">Module</label>
+                    <select class="form-control" id="module" required>
+                        <option value="" selected disabled>Select module</option>
+                        <option value="MODULE 1">MODULE 1</option>
+                        <option value="MODULE 2">MODULE 2</option>
+                        <option value="MODULE 3">MODULE 3</option>
+                        <option value="MODULE 4">MODULE 4</option>
+                        <option value="MODULE 5">MODULE 5</option>
+                        <option value="MODULE 6">MODULE 6</option>
+                        <option value="MODULE 7">MODULE 7</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary w-100" id="loginBtn">
+                    Sign In to Dashboard
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="mainApp" class="app-container hidden">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <svg class="logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fill="currentColor" d="M4,6 L8,6 L8,18 L4,18 L4,6 Z M10,6 L14,6 L14,12 L10,12 L10,6 Z M10,14 L14,14 L14,18 L10,18 L10,14 Z M16,6 L20,6 L20,18 L16,18 L16,6 Z"/>
+                    </svg>
+                    <span class="brand-name">STELLANTIS</span>
+                </div>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-section-title">PRODUCTION</div>
+                <a href="#" class="nav-item active" data-page="dashboard">
+                    <i class="nav-icon fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-page="saisie">
+                    <i class="nav-icon fas fa-edit"></i>
+                    <span>Data Entry</span>
+                </a>
+                <a href="#" class="nav-item" data-page="synthese">
+                    <i class="nav-icon fas fa-chart-bar"></i>
+                    <span>Reports</span>
+                </a>
+                <a href="#" class="nav-item" data-page="historique">
+                    <i class="nav-icon fas fa-history"></i>
+                    <span>History</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">SYSTEM</div>
+                <div class="nav-item">
+                    <i class="nav-icon fas fa-database"></i>
+                    <span id="dbStatus">Database: Offline</span>
+                </div>
+                <div class="nav-item">
+                    <i class="nav-icon fas fa-users"></i>
+                    <span>Shared Data</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <h1 class="page-title" id="currentPageTitle">Dashboard</h1>
+                <div class="user-menu">
+                    <div id="topBarStatus" class="sync-status sync-offline me-3">
+                        <i class="fas fa-database me-2"></i>Offline
+                    </div>
+                    <div class="user-info">
+                        <div class="user-avatar" id="userAvatar">U</div>
+                        <div>
+                            <div id="userInfo">User: - | Shift: - | Module: -</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline" id="logoutBtn">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Dashboard Page -->
+                <div id="dashboardPage" class="page-content fade-in">
+                    <!-- Database Status -->
+                    <div id="dbAlert" class="alert alert-info mb-4">
+                        <i class="fas fa-database me-2"></i>
+                        <strong>Cloud Database:</strong> <span id="dbStatusText">Connecting...</span>
+                    </div>
+
+                    <!-- Statistics -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon bg-blue">
+                                <i class="fas fa-cogs text-white"></i>
+                            </div>
+                            <div class="stat-value" id="totalProduction">0</div>
+                            <div class="stat-label">Total Production</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon bg-red">
+                                <i class="fas fa-times-circle text-white"></i>
+                            </div>
+                            <div class="stat-value" id="totalDowntime">0</div>
+                            <div class="stat-label">Downtime (min)</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: #28a745;">
+                                <i class="fas fa-tachometer-alt text-white"></i>
+                            </div>
+                            <div class="stat-value" id="efficiencyRate">0%</div>
+                            <div class="stat-label">Efficiency Rate</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: #ffc107;">
+                                <i class="fas fa-exclamation-triangle text-white"></i>
+                            </div>
+                            <div class="stat-value" id="totalIssues">0</div>
+                            <div class="stat-label">Reported Issues</div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Production -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Recent Production (Cloud Database)</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Shift</th>
+                                            <th>Module</th>
+                                            <th>User</th>
+                                            <th>Total Production</th>
+                                            <th>First Serial</th>
+                                            <th>Last Serial</th>
+                                            <th>Downtime</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recentProductionTable">
+                                        <tr>
+                                            <td colspan="8" class="text-center py-4">
+                                                <div class="loading-spinner me-2"></div>
+                                                Loading data from cloud database...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Entry Page -->
+                <div id="saisiePage" class="page-content hidden fade-in">
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-cloud me-2"></i>
+                        Data will be saved to cloud database and shared with all users.
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Production Data Entry (Cloud)</h2>
+                        </div>
+                        <div class="card-body">
+                            <form id="productionForm">
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="form-section">
+                                            <label class="form-label">Date</label>
+                                            <input type="date" class="form-control" id="inputDate" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-section">
+                                            <label class="form-label">Module</label>
+                                            <select class="form-control" id="inputModule" required>
+                                                <option value="" selected disabled>Select module</option>
+                                                <option value="MODULE 1">MODULE 1</option>
+                                                <option value="MODULE 2">MODULE 2</option>
+                                                <option value="MODULE 3">MODULE 3</option>
+                                                <option value="MODULE 4">MODULE 4</option>
+                                                <option value="MODULE 5">MODULE 5</option>
+                                                <option value="MODULE 6">MODULE 6</option>
+                                                <option value="MODULE 7">MODULE 7</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Serial Numbers -->
+                                <div class="form-section">
+                                    <h3 class="section-title">Engine Serial Numbers</h3>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">First Serial (Start of Shift)</label>
+                                            <input type="text" class="form-control" id="firstSerialNumber" placeholder="e.g., PSA240001" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Last Serial (End of Shift)</label>
+                                            <input type="text" class="form-control" id="lastSerialNumber" placeholder="e.g., PSA240050" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Hourly Production -->
+                                <div class="form-section">
+                                    <h3 class="section-title">Hourly Production</h3>
+                                    <div id="hourlyInputs">
+                                        <!-- Hourly inputs will be generated here -->
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mt-3 p-3 bg-light rounded">
+                                        <span class="fw-bold">Total Production:</span>
+                                        <span class="fw-bold text-blue fs-5" id="hourlyTotal">0</span>
+                                    </div>
+                                </div>
+
+                                <!-- Downtime & Issues -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-section">
+                                            <label class="form-label">Total Downtime (minutes)</label>
+                                            <input type="number" class="form-control" id="inputDowntime" min="0" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-section">
+                                            <label class="form-label">Issues</label>
+                                            <select class="form-control" id="inputIssues">
+                                                <option value="">Select issue type</option>
+                                                <option value="Mechanical Failure">Mechanical Failure</option>
+                                                <option value="Electrical Failure">Electrical Failure</option>
+                                                <option value="Material Shortage">Material Shortage</option>
+                                                <option value="Model Change">Model Change</option>
+                                                <option value="Preventive Maintenance">Preventive Maintenance</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-section">
+                                    <label class="form-label">Comments</label>
+                                    <textarea class="form-control" id="inputComments" rows="3" placeholder="Additional notes..."></textarea>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary" id="saveBtn">
+                                    <i class="fas fa-cloud-upload-alt me-2"></i>Save to Cloud Database
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Other pages -->
+                <div id="synthesePage" class="page-content hidden fade-in">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Production Reports (Cloud Data)</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-chart-line me-2"></i>
+                                Reports generated from shared cloud database.
+                            </div>
+                            <p>Detailed reports and analytics will be available soon.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="historiquePage" class="page-content hidden fade-in">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Production History (Cloud Data)</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-history me-2"></i>
+                                Showing history from shared cloud database.
+                            </div>
+                            <p>Historical data and records will be available soon.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration - باستخدام بياناتك
+        const firebaseConfig = {
+            apiKey: "AIzaSyCzCraTs0RHD36IfdpXxa2cW7nHGxhwV5k",
+            authDomain: "km25-2ff66.firebaseapp.com",
+            projectId: "km25-2ff66",
+            storageBucket: "km25-2ff66.firebasestorage.app",
+            messagingSenderId: "860841181031",
+            appId: "1:860841181031:web:f12adc4d3d84a331d979c2",
+            measurementId: "G-T34VXJZDFN"
+        };
+
+        // Initialize Firebase
+        let db;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            console.log("✅ Firebase initialized successfully");
+        } catch (error) {
+            console.error("❌ Firebase initialization error:", error);
+        }
+
+        // Application data and logic
+        let currentUser = null;
+        let productionData = [];
+        const HOURLY_TARGET = 50;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize the application
+            const loginPage = document.getElementById('loginPage');
+            const mainApp = document.getElementById('mainApp');
+            const loginForm = document.getElementById('loginForm');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const userInfo = document.getElementById('userInfo');
+            const userAvatar = document.getElementById('userAvatar');
+            const productionForm = document.getElementById('productionForm');
+            const hourlyInputs = document.getElementById('hourlyInputs');
+            const hourlyTotal = document.getElementById('hourlyTotal');
+            const currentPageTitle = document.getElementById('currentPageTitle');
+            const firebaseStatus = document.getElementById('firebaseStatus');
+            const dbStatus = document.getElementById('dbStatus');
+            const topBarStatus = document.getElementById('topBarStatus');
+            const dbStatusText = document.getElementById('dbStatusText');
+            const dbAlert = document.getElementById('dbAlert');
+            const loginBtn = document.getElementById('loginBtn');
+            const saveBtn = document.getElementById('saveBtn');
+
+            // Navigation
+            const navItems = document.querySelectorAll('.nav-item');
+            const pageContents = document.querySelectorAll('.page-content');
+
+            // Set today's date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('inputDate').value = today;
+
+            // Check Firebase connection
+            function checkFirebaseConnection() {
+                if (db) {
+                    db.collection('test').limit(1).get()
+                        .then(() => {
+                            updateDatabaseStatus('online', '✅ Cloud Database Connected');
+                        })
+                        .catch((error) => {
+                            console.error('Firebase connection error:', error);
+                            updateDatabaseStatus('offline', '❌ Database Connection Failed - Using Local Storage');
+                        });
+                } else {
+                    updateDatabaseStatus('offline', '❌ Firebase Not Configured - Using Local Storage');
+                }
+            }
+
+            function updateDatabaseStatus(status, message) {
+                const statusClass = status === 'online' ? 'sync-online' : 'sync-offline';
+                const icon = status === 'online' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+                
+                firebaseStatus.className = `sync-status ${statusClass} mt-3`;
+                firebaseStatus.innerHTML = `<i class="fas ${icon} me-2"></i>${message}`;
+                
+                dbStatus.textContent = `Database: ${status === 'online' ? 'Online' : 'Offline'}`;
+                topBarStatus.className = `sync-status ${statusClass} me-3`;
+                topBarStatus.innerHTML = `<i class="fas ${icon} me-2"></i>${status === 'online' ? 'Online' : 'Offline'}`;
+                
+                dbAlert.className = `alert ${status === 'online' ? 'alert-success' : 'alert-warning'} mb-4`;
+                dbAlert.innerHTML = `<i class="fas ${icon} me-2"></i><strong>${status === 'online' ? 'Cloud Database' : 'Local Storage'}:</strong> ${message}`;
+                
+                dbStatusText.textContent = message;
+            }
+
+            // Create hourly inputs
+            function createHourlyInputs(shift) {
+                hourlyInputs.innerHTML = '';
+                const hours = shift === 'Morning' 
+                    ? ['06:00-07:00', '07:00-08:00', '08:00-09:00', '09:00-10:00', '10:00-11:00', '11:00-12:00', '12:00-13:00', '13:00-14:00']
+                    : ['14:00-15:00', '15:00-16:00', '16:00-17:00', '17:00-18:00', '18:00-19:00', '19:00-20:00', '20:00-21:00', '21:00-22:00'];
+
+                hours.forEach(hour => {
+                    const row = document.createElement('div');
+                    row.className = 'row align-items-center mb-3';
+                    
+                    row.innerHTML = `
+                        <div class="col-md-3">
+                            <label class="form-label">${hour}</label>
+                        </div>
+                        <div class="col-md-6">
+                            <input type="number" class="form-control hour-input" data-hour="${hour}" min="0" max="100" value="0">
+                        </div>
+                        <div class="col-md-3">
+                            <span class="badge bg-warning">
+                                0/${HOURLY_TARGET}
+                            </span>
+                        </div>
+                    `;
+                    
+                    hourlyInputs.appendChild(row);
+                });
+
+                updateHourlyTotal();
+            }
+
+            function updateHourlyTotal() {
+                let total = 0;
+                const inputs = hourlyInputs.querySelectorAll('.hour-input');
+                inputs.forEach(input => {
+                    total += parseInt(input.value) || 0;
+                    const badge = input.closest('.row').querySelector('.badge');
+                    const value = parseInt(input.value) || 0;
+                    badge.className = `badge ${value >= HOURLY_TARGET ? 'bg-success' : 'bg-warning'}`;
+                    badge.textContent = `${value}/${HOURLY_TARGET}`;
+                });
+                hourlyTotal.textContent = total;
+            }
+
+            // Event listeners for hourly inputs
+            hourlyInputs.addEventListener('input', function(e) {
+                if (e.target.classList.contains('hour-input')) {
+                    updateHourlyTotal();
+                }
+            });
+
+            // 🔥 Firebase Functions - حفظ البيانات في قاعدة البيانات
+            async function saveProductionToFirebase(productionEntry) {
+                if (!db) {
+                    throw new Error('Firebase not initialized');
+                }
+
+                try {
+                    const docRef = await db.collection('production').add({
+                        ...productionEntry,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log('✅ Document saved with ID:', docRef.id);
+                    return docRef.id;
+                } catch (error) {
+                    console.error('❌ Error saving to Firebase:', error);
+                    throw error;
+                }
+            }
+
+            // 🔥 Firebase Functions - جلب البيانات من قاعدة البيانات
+            async function loadProductionFromFirebase() {
+                if (!db) {
+                    throw new Error('Firebase not initialized');
+                }
+
+                try {
+                    const snapshot = await db.collection('production')
+                        .orderBy('createdAt', 'desc')
+                        .limit(50)
+                        .get();
+                    
+                    const data = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    
+                    console.log('✅ Loaded', data.length, 'documents from Firebase');
+                    return data;
+                } catch (error) {
+                    console.error('❌ Error loading from Firebase:', error);
+                    throw error;
+                }
+            }
+
+            // 🔥 Real-time Listener - تحديث البيانات تلقائياً
+            function setupRealTimeListener() {
+                if (!db) return;
+
+                db.collection('production')
+                    .orderBy('createdAt', 'desc')
+                    .limit(20)
+                    .onSnapshot((snapshot) => {
+                        console.log('🔄 Real-time update received');
+                        loadRecentProduction();
+                        loadDashboardData();
+                    }, (error) => {
+                        console.error('❌ Real-time listener error:', error);
+                    });
+            }
+
+            // Login form handler
+            loginForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const codePSA = document.getElementById('codePSA').value;
+                const userName = document.getElementById('userName').value;
+                const shift = document.getElementById('shift').value;
+                const module = document.getElementById('module').value;
+                
+                currentUser = {
+                    id: generateId(),
+                    codePSA: codePSA,
+                    name: userName,
+                    shift: shift,
+                    module: module
+                };
+
+                // Update UI
+                userInfo.textContent = `${userName} | ${shift} | ${module}`;
+                userAvatar.textContent = userName.charAt(0).toUpperCase();
+                loginPage.classList.add('hidden');
+                mainApp.classList.remove('hidden');
+
+                // Pre-fill module
+                document.getElementById('inputModule').value = module;
+                createHourlyInputs(shift);
+
+                // Setup real-time listener
+                setupRealTimeListener();
+
+                // Load data
+                await loadDashboardData();
+                await loadRecentProduction();
+            });
+
+            // Logout handler
+            logoutBtn.addEventListener('click', function() {
+                currentUser = null;
+                mainApp.classList.add('hidden');
+                loginPage.classList.remove('hidden');
+                loginForm.reset();
+            });
+
+            // Navigation handler
+            navItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Update active nav item
+                    navItems.forEach(nav => nav.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Show selected page
+                    const targetPage = this.getAttribute('data-page');
+                    const pageTitles = {
+                        'dashboard': 'Dashboard',
+                        'saisie': 'Data Entry',
+                        'synthese': 'Reports',
+                        'historique': 'History'
+                    };
+                    
+                    currentPageTitle.textContent = pageTitles[targetPage];
+                    
+                    pageContents.forEach(page => {
+                        if (page.id === `${targetPage}Page`) {
+                            page.classList.remove('hidden');
+                            page.classList.add('fade-in');
+                        } else {
+                            page.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+
+            // Production form handler
+            productionForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const hourlyProduction = {};
+                const inputs = hourlyInputs.querySelectorAll('.hour-input');
+                inputs.forEach(input => {
+                    hourlyProduction[input.getAttribute('data-hour')] = parseInt(input.value) || 0;
+                });
+
+                const productionEntry = {
+                    userId: currentUser.id,
+                    userName: currentUser.name,
+                    userShift: currentUser.shift,
+                    userModule: currentUser.module,
+                    date: document.getElementById('inputDate').value,
+                    module: document.getElementById('inputModule').value,
+                    shift: currentUser.shift,
+                    total: parseInt(hourlyTotal.textContent),
+                    firstSerialNumber: document.getElementById('firstSerialNumber').value,
+                    lastSerialNumber: document.getElementById('lastSerialNumber').value,
+                    hourlyProduction: hourlyProduction,
+                    downtime: parseInt(document.getElementById('inputDowntime').value) || 0,
+                    issues: document.getElementById('inputIssues').value,
+                    comments: document.getElementById('inputComments').value,
+                    timestamp: new Date().toISOString()
+                };
+
+                // Save to Firebase
+                const originalButtonText = saveBtn.innerHTML;
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<div class="loading-spinner me-2"></div>Saving to Cloud...';
+
+                try {
+                    await saveProductionToFirebase(productionEntry);
+                    
+                    // Reset form
+                    productionForm.reset();
+                    document.getElementById('inputDate').value = today;
+                    document.getElementById('inputModule').value = currentUser.module;
+                    createHourlyInputs(currentUser.shift);
+
+                    alert('✅ Production data saved to cloud database!');
+                    
+                } catch (error) {
+                    alert('❌ Error saving to cloud database. Please try again.');
+                    console.error('Save error:', error);
+                } finally {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = originalButtonText;
+                }
+            });
+
+            // Utility functions
+            function generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2);
+            }
+
+            async function loadDashboardData() {
+                try {
+                    const data = await loadProductionFromFirebase();
+                    
+                    const totalProduction = data.reduce((sum, entry) => sum + entry.total, 0);
+                    const totalDowntime = data.reduce((sum, entry) => sum + entry.downtime, 0);
+                    const totalIssues = data.filter(entry => entry.issues && entry.issues.trim() !== '').length;
+                    const efficiencyRate = totalProduction > 0 ? Math.round((totalProduction / (totalProduction + totalDowntime)) * 100) : 0;
+
+                    document.getElementById('totalProduction').textContent = totalProduction.toLocaleString();
+                    document.getElementById('totalDowntime').textContent = totalDowntime.toLocaleString();
+                    document.getElementById('totalIssues').textContent = totalIssues.toLocaleString();
+                    document.getElementById('efficiencyRate').textContent = `${efficiencyRate}%`;
+                } catch (error) {
+                    console.error('Error loading dashboard data:', error);
+                    // Fallback to local storage
+                    const localData = JSON.parse(localStorage.getItem('productionData')) || [];
+                    const totalProduction = localData.reduce((sum, entry) => sum + entry.total, 0);
+                    const totalDowntime = localData.reduce((sum, entry) => sum + entry.downtime, 0);
+                    const totalIssues = localData.filter(entry => entry.issues && entry.issues.trim() !== '').length;
+                    const efficiencyRate = totalProduction > 0 ? Math.round((totalProduction / (totalProduction + totalDowntime)) * 100) : 0;
+
+                    document.getElementById('totalProduction').textContent = totalProduction.toLocaleString();
+                    document.getElementById('totalDowntime').textContent = totalDowntime.toLocaleString();
+                    document.getElementById('totalIssues').textContent = totalIssues.toLocaleString();
+                    document.getElementById('efficiencyRate').textContent = `${efficiencyRate}%`;
+                }
+            }
+
+            async function loadRecentProduction() {
+                const tableBody = document.getElementById('recentProductionTable');
+                tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4"><div class="loading-spinner me-2"></div>Loading data from cloud database...</td></tr>';
+
+                try {
+                    const recentEntries = await loadProductionFromFirebase();
+                    
+                    if (recentEntries.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No production data available in cloud database</td></tr>';
+                        return;
+                    }
+
+                    tableBody.innerHTML = '';
+                    recentEntries.slice(0, 10).forEach(entry => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${formatDate(entry.date)}</td>
+                            <td><span class="badge badge-shift">${entry.userShift || entry.shift || '-'}</span></td>
+                            <td><span class="badge badge-module">${entry.userModule || entry.module}</span></td>
+                            <td>${entry.userName || 'Unknown'}</td>
+                            <td>${entry.total.toLocaleString()}</td>
+                            <td><code>${entry.firstSerialNumber || '-'}</code></td>
+                            <td><code>${entry.lastSerialNumber || '-'}</code></td>
+                            <td>${entry.downtime}m</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                } catch (error) {
+                    console.error('Error loading recent production:', error);
+                    // Fallback to local storage
+                    const localData = JSON.parse(localStorage.getItem('productionData')) || [];
+                    const recentEntries = localData
+                        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                        .slice(0, 5);
+
+                    if (recentEntries.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No production data available</td></tr>';
+                        return;
+                    }
+
+                    tableBody.innerHTML = '';
+                    recentEntries.forEach(entry => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${formatDate(entry.date)}</td>
+                            <td><span class="badge badge-shift">${entry.shift || '-'}</span></td>
+                            <td><span class="badge badge-module">${entry.module}</span></td>
+                            <td>Local User</td>
+                            <td>${entry.total.toLocaleString()}</td>
+                            <td><code>${entry.firstSerialNumber || '-'}</code></td>
+                            <td><code>${entry.lastSerialNumber || '-'}</code></td>
+                            <td>${entry.downtime}m</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                }
+            }
+
+            function formatDate(dateString) {
+                return new Date(dateString).toLocaleDateString('en-GB');
+            }
+
+            // Initialize the application
+            checkFirebaseConnection();
+        });
+    </script>
+</body>
+</html>
